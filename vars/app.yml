@@ -1,0 +1,14 @@
+---
+app_sg:
+  name: app_security_group
+  description: app tier security group
+  region: us-east-1
+
+app_ec2:
+  name: demo_app_ec2
+  instance_type: t3.small
+  image_id: ami-005f9685cb30f234b
+  region: us-east-1
+  tags:
+    Name: app_ec2
+    app: demo

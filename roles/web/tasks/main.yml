@@ -1,0 +1,36 @@
+---
+- name: Get web subnet info
+  register: r_web_subnet
+  amazon.aws.ec2_vpc_subnet_info:
+    region: "{{ web_sg.region }}"
+    filters:
+      vpc-id: "{{ web_vpc_id }}"
+      "tag:Name": "{{ web_subnet_name }}"
+
+- name: Create web security group
+  register: r_web_sg
+  amazon.aws.ec2_security_group:
+    name: "{{ web_sg.name }}"
+    description: "{{ web_sg.description }}"
+    vpc_id: "{{ web_vpc_id }}"
+    region: "{{ web_sg.region }}"
+    rules: "{{ web_sg.rules }}"
+
+- name: Create web ec2 instance
+  register: r_web_ec2
+  amazon.aws.ec2_instance:
+    name: "{{ web_ec2.name }}"
+    region: "{{ web_ec2.region }}"
+    vpc_subnet_id: "{{ r_web_subnet.subnets[0].id }}"
+    instance_type: "{{ web_ec2.instance_type }}"
+    security_group: "{{ web_sg.name }}"
+    network:
+      assign_public_ip: true
+    image_id: "{{ web_ec2.image_id }}"
+    tags: "{{ web_ec2.tags }}"
+
+- name: Stop ec2 instance (for cost saving)
+  amazon.aws.ec2_instance:
+    region: "{{ web_ec2.region }}"
+    state: stopped
+    instance_ids: "{{ r_web_ec2.instance_ids }}"

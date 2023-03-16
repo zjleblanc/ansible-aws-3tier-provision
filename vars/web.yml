@@ -1,0 +1,20 @@
+---
+web_sg:
+  name: web_security_group
+  description: web tier security group
+  region: us-east-1
+  rules:
+    - proto: tcp
+      ports:
+        - 80
+      cidr_ip: 0.0.0.0/0
+      rule_desc: allow all on port 80
+
+web_ec2:
+  name: demo_web_ec2
+  instance_type: t3.small
+  image_id: ami-005f9685cb30f234b
+  region: us-east-1
+  tags:
+    Name: app_ec2
+    app: demo

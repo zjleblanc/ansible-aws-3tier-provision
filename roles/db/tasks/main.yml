@@ -1,0 +1,60 @@
+---
+- name: Get app security group info
+  register: r_db_app_sg
+  amazon.aws.ec2_security_group_info:
+    region: "{{ db_sg.region }}"
+    filters:
+      group-name: "{{ db_app_sg_name }}"
+
+- name: Create db security group
+  register: r_db_sg
+  amazon.aws.ec2_security_group:
+    name: "{{ db_sg.name }}"
+    description: "{{ db_sg.description }}"
+    vpc_id: "{{ db_vpc_id }}"
+    region: "{{ db_sg.region }}"
+    rules:
+      - proto: tcp
+        ports:
+          - 3306
+        group_id: "{{ r_db_app_sg.security_groups[0].group_id }}"
+        rule_desc: allow all on port 5432 from app tier
+
+- name: Get app subnet info
+  register: r_app_subnet_info
+  amazon.aws.ec2_vpc_subnet_info:
+    region: "{{ db_sg.region }}"
+    filters:
+      vpc-id: "{{ db_vpc_id }}"
+      "tag:for": "database"
+
+- name: Add or change a subnet group and associate tags
+  amazon.aws.rds_subnet_group:
+    state: present
+    name: "{{ db_rds_group.name }}"
+    region: "{{ db_rds_group.region }}"
+    description: "{{ db_rds_group.description }}"
+    subnets: "{{ r_app_subnet_info.subnets | map(attribute='id') | list }}"
+    tags: "{{ db_rds_group.tags }}"
+
+- name: Create db rds instance
+  register: r_db_rds
+  amazon.aws.rds_instance:
+    id: "{{ db_rds.id }}"
+    region: "{{ db_rds.region }}"
+    state: present
+    engine: "{{ db_rds.engine }}"
+    engine_version: "{{ db_rds.engine_version }}"
+    username: "{{ db_rds.user }}"
+    password: "{{ db_rds.password }}"
+    db_instance_class: "{{ db_rds.instance_class }}"
+    allocated_storage: "{{ db_rds.allocated_storage }}"
+    db_subnet_group_name: "{{ db_rds_group.name }}"
+    vpc_security_group_ids:
+      - "{{ r_db_sg.group_id }}"
+    purge_security_groups: false
+
+- name: Stop db rds instance (for cost saving)
+  amazon.aws.rds_instance:
+    id: "{{ db_rds.id }}"
+    state: stopped

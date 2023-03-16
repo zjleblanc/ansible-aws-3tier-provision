@@ -1,0 +1,29 @@
+vpc_definitions:
+  - name: demo_vpc_1
+    cidr_block: 10.10.0.0/16
+    region: us-east-1
+    tags:
+      app: demo
+    subnets:
+      - cidr: 10.10.0.0/26
+        az: us-east-1a
+        map_public: true
+        tags:
+          Name: web_subnet
+          app: demo
+      - cidr: 10.10.0.64/26
+        az: us-east-1a
+        tags:
+          Name: app_subnet
+      - cidr: 10.10.0.128/26
+        az: us-east-1a
+        tags:
+          Name: database_subnet_1
+          for: database
+          app: demo
+      - cidr: 10.10.0.192/26
+        az: us-east-1b
+        tags:
+          Name: database_subnet_2
+          for: database
+          app: demo

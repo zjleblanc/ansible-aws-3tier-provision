@@ -1,0 +1,23 @@
+---
+- name: "Create VPC network in {{ vpc_network.region }}"
+  register: r_vpc
+  amazon.aws.ec2_vpc_net:
+    name: "{{ vpc_network.name }}"
+    cidr_block: "{{ vpc_network.cidr_block }}"
+    region: "{{ vpc_network.region }}"
+    tags: "{{ vpc_network.tags }}"
+
+- name: Create VPC subnets
+  loop: "{{ vpc_network.subnets }}"
+  loop_control:
+    loop_var: subnet
+    label: "{{ subnet.tags.Name }}-{{ vpc_network.region }}-{{ subnet.az }}"
+  register: r_vpc_subnets
+  amazon.aws.ec2_vpc_subnet:
+    state: present
+    region: "{{ vpc_network.region }}"
+    vpc_id: "{{ r_vpc.vpc.id }}"
+    cidr: "{{ subnet.cidr }}"
+    az: "{{ subnet.az }}"
+    map_public: "{{ subnet.map_public | default(false) }}"
+    tags: "{{ r_vpc.vpc.tags | combine(subnet.tags) }}"

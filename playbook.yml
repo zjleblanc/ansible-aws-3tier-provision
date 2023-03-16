@@ -1,0 +1,52 @@
+---
+- name: Deploy 3-Tier App on AWS
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars_files:
+    - vars/vpcs.yml
+    - vars/web.yml
+    - vars/app.yml
+    - vars/db.yml
+
+  tasks:
+    - name: Assert db credentials provided
+      ansible.builtin.assert:
+        that:
+          - db_user is defined
+          - db_password is defined
+        fail_msg: "Must pass extra_vars: db_user, db_password for rds instance"
+
+    - name: Create VPCs
+      loop: "{{ vpc_definitions }}"
+      loop_control:
+        loop_var: definition
+        label: "{{ definition.name }}-{{ definition.region }}"
+      vars:
+        vpc_network: "{{ definition }}"
+      ansible.builtin.include_role:
+        name: vpc
+
+    - name: Create Web Tier
+      vars:
+        web_vpc_id: "{{ r_vpc.vpc.id }}"
+        web_subnet_name: web_subnet
+      ansible.builtin.include_role:
+        name: web
+
+    - name: Create App Tier
+      vars:
+        app_vpc_id: "{{ r_vpc.vpc.id }}"
+        app_subnet_name: app_subnet
+        app_web_sg_name: "{{ web_sg.name }}"
+      ansible.builtin.include_role:
+        name: app
+
+    - name: Create Database Tier
+      vars:
+        db_vpc_id: "{{ r_vpc.vpc.id }}"
+        db_subnet_name: database_subnet
+        db_app_sg_name: "{{ app_sg.name }}"
+      ansible.builtin.include_role:
+        name: db

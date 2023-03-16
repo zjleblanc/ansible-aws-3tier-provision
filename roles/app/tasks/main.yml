@@ -1,0 +1,48 @@
+---
+- name: Get app subnet info
+  register: r_app_subnet
+  amazon.aws.ec2_vpc_subnet_info:
+    region: "{{ app_sg.region }}"
+    filters:
+      vpc-id: "{{ app_vpc_id }}"
+      "tag:Name": "{{ app_subnet_name }}"
+
+- name: Get web security group info
+  register: r_app_web_sg
+  amazon.aws.ec2_security_group_info:
+    region: "{{ app_sg.region }}"
+    filters:
+      group-name: "{{ app_web_sg_name }}"
+
+- name: Create app security group
+  register: r_app_sg
+  amazon.aws.ec2_security_group:
+    name: "{{ app_sg.name }}"
+    description: "{{ app_sg.description }}"
+    vpc_id: "{{ app_vpc_id }}"
+    region: "{{ app_sg.region }}"
+    rules:
+      - proto: tcp
+        ports:
+          - 80
+        group_id: "{{ r_app_web_sg.security_groups[0].group_id }}"
+        rule_desc: allow all on port 80 from web tier
+
+- name: Create app ec2 instance
+  register: r_app_ec2
+  amazon.aws.ec2_instance:
+    name: "{{ app_ec2.name }}"
+    region: "{{ app_ec2.region }}"
+    vpc_subnet_id: "{{ r_app_subnet.subnets[0].id }}"
+    instance_type: "{{ app_ec2.instance_type }}"
+    security_group: "{{ app_sg.name }}"
+    network:
+      assign_public_ip: true
+    image_id: "{{ app_ec2.image_id }}"
+    tags: "{{ app_ec2.tags }}"
+
+- name: Stop ec2 instance (for cost saving)
+  amazon.aws.ec2_instance:
+    region: "{{ app_ec2.region }}"
+    state: stopped
+    instance_ids: "{{ r_app_ec2.instance_ids }}"
